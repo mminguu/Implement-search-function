@@ -1,3 +1,84 @@
-from django.shortcuts import render
+import uuid
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .models import SessionUser, Question, Answer
 
-# Create your views here.
+def get_recent_conversations(user, limit=3):
+    """
+    최근 질문 + 답변 N개를 가져온다
+    """
+    questions = (
+        Question.objects
+        .filter(user=user)
+        .order_by("-createdAt")[:limit]
+    )
+
+    conversations = []
+    for q in reversed(questions):
+        try:
+            a = q.answer
+            conversations.append({
+                "question": q.content,
+                "answer": a.content
+            })
+        except Answer.DoesNotExist:
+            continue
+
+    return conversations
+
+def get_guest_user(request):
+    """
+    세션에 UUID 있으면 가져오고,
+    없으면 새 GuestUser 생성
+    """
+    user_uuid = request.session.get("guest_uuid")
+
+    if not user_uuid:
+        guest = SessionUser.objects.create()
+        request.session["guest_uuid"] = str(guest.uuid)
+        return guest
+
+    return SessionUser.objects.get(uuid=user_uuid)
+
+@csrf_exempt
+@require_POST
+def ask_question(request):
+    content = request.POST.get("question")
+
+    if not content:
+        return JsonResponse({"error": "질문이 없습니다."}, status=400)
+
+    # 1️⃣ 세션 유저
+    user = get_guest_user(request)
+
+    # 2️⃣ 질문 저장
+    question = Question.objects.create(
+        user=user,
+        content=content
+    )
+
+    # 3️⃣ 🔥 이전 대화 불러오기
+    previous_conversations = get_recent_conversations(user)
+
+    # 4️⃣ 🔥 프롬프트 구성
+    prompt = ""
+    for conv in previous_conversations:
+        prompt += f"Q: {conv['question']}\n"
+        prompt += f"A: {conv['answer']}\n\n"
+
+    prompt += f"Q: {content}\nA:"
+
+    # 5️⃣ RAG / LLM 호출 (예시)
+    answer_text = run_rag(prompt)  # ← 기존 RAG 함수
+
+    # 6️⃣ 답변 저장
+    Answer.objects.create(
+        question=question,
+        content=answer_text
+    )
+
+    return JsonResponse({
+        "question": content,
+        "answer": answer_text
+    })
