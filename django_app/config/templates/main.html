@@ -1,34 +1,112 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>청년정책 챗봇</title>
-  <link rel="stylesheet" href="/chat/main.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="청년이음 - RAG 기반 청년 맞춤형 복지 정책 챗봇">
+    <title>청년이음 - 청년 정책 챗봇</title>
+    <link rel="stylesheet" href="/chat/main.css">
+    <!-- Markdown 렌더링 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 <body>
-  <div class="chat-container">
-    <div class="chat-header">
-      <h1>💬 청년정책 챗봇</h1>
-      <p>청년정책에 대해 무엇이든 물어보세요!</p>
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <div class="logo">
+                    <!-- TODO: 로고 이미지 교체 -->
+                    <img src="{% static 'assets/images/logo.png' %}" alt="청년이음 로고"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <span class="logo-text" style="display:none;">청년이음</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" id="btn-new-chat" title="새 채팅" onclick="handleNewChat()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                        <line x1="12" y1="8" x2="12" y2="16" />
+                        <line x1="8" y1="12" x2="16" y2="12" />
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-font-size" title="폰트 크기" onclick="handleFontSize()">
+                    <span class="icon-text">Aa</span>
+                </button>
+                <button class="icon-btn" id="btn-save" title="대화 저장" onclick="handleSave()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                </button>
+                <button class="icon-btn" id="btn-help" title="도움말" onclick="handleHelp()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== CHAT WRAPPER (카드 컨테이너) ===== -->
+    <div class="chat-wrapper">
+        <main class="chat-container" id="chat-container">
+            <!-- 봇 초기 메시지 -->
+            <div class="message bot-message">
+                <div class="avatar">
+                    <!-- TODO: 봇 아바타 이미지 교체 -->
+                    <img src="{% static 'assets/images/avatar.png' %}" alt="봇 아바타"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('avatar-placeholder');">
+                </div>
+                <div class="message-bubble">
+                    <p>안녕하세요!</p>
+                    <p>어떤 도움이 필요하신가요?</p>
+                </div>
+            </div>
+
+            <!-- 메시지들이 여기에 동적으로 추가됨 -->
+        </main>
     </div>
-    
-    <div class="chat-messages" id="chatMessages">
-      <!-- 메시지가 여기에 추가됩니다 -->
+
+    <!-- ===== HELP MODAL ===== -->
+    <div class="modal-overlay" id="help-modal" onclick="closeHelpModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeHelpModal()">&times;</button>
+            <div class="modal-body" id="help-content">
+                <!-- 도움말 내용이 여기에 로드됨 -->
+            </div>
+        </div>
     </div>
-    
-    <div class="chat-input-container">
-      <input 
-        type="text" 
-        id="questionInput" 
-        placeholder="질문을 입력하세요..." 
-        autocomplete="off"
-      >
-      <button id="sendButton">전송</button>
-    </div>
-  </div>
-  
-  <script src="{% static 'js/main.js' %}"></script>
+
+    <!-- ===== INPUT AREA ===== -->
+    <footer class="input-area">
+        <div class="input-wrapper">
+            <input type="text" id="message-input" class="message-input" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+                <span class="send-text">보내기</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- ===== JAVASCRIPT ===== -->
+    <!-- Django static 경로를 JS에 전달 -->
+    <script>
+        window.AVATAR_IMG_PATH = "{% static 'assets/images/avatar.png' %}";
+    </script>
+    <!-- 외부 JS 파일 로드 -->
+    <script src="{% static 'js/main.js' %}"></script>
 </body>
+
 </html>
