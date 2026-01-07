@@ -78,16 +78,10 @@ def ask_question(request):
     # 1️⃣ 세션 유저
     user = get_guest_user(request)
 
-    # 2️⃣ 질문 저장
-    question = Question.objects.create(
-        user=user,
-        content=content
-    )
-
-    # 3️⃣ 🔥 이전 대화 불러오기
+    # 2️⃣ 🔥 이전 대화 불러오기 (현재 질문 저장 전에!)
     previous_conversations = get_recent_conversations(user)
 
-    # 4️⃣ 🔥 프롬프트 구성
+    # 3️⃣ 🔥 프롬프트 구성
     prompt = ""
     for conv in previous_conversations:
         prompt += f"Q: {conv['question']}\n"
@@ -95,8 +89,14 @@ def ask_question(request):
 
     prompt += f"Q: {content}\nA:"
 
-    # 5️⃣ RAG / LLM 호출 (예시)
+    # 4️⃣ RAG / LLM 호출 (예시)
     answer_text = run_rag(prompt)  # ← 기존 RAG 함수
+
+    # 5️⃣ 질문 저장 (답변 생성 후)
+    question = Question.objects.create(
+        user=user,
+        content=content
+    )
 
     # 6️⃣ 답변 저장
     Answer.objects.create(
