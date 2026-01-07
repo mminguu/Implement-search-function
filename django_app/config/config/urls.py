@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
 urlpatterns = [
+    path("", RedirectView.as_view(url='/chat/', permanent=False)),  # 루트에서 /chat/로 리다이렉트
     path("admin/", admin.site.urls),
     path("chat/", include("chat.urls")),
 ]
