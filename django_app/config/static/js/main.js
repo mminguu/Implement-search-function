@@ -37,7 +37,7 @@ async function sendMessage() {
         // API 호출 (Django 백엔드)
         const formData = new FormData();
         formData.append('question', message);
-        
+
         const response = await fetch(`${API_BASE_URL}/chat/ask/`, {
             method: 'POST',
             body: formData
@@ -171,19 +171,22 @@ function handleFontSize() {
     const root = document.documentElement;
     switch (size) {
         case 'level1':
-            root.style.setProperty('--font-size-base', '16px');
-            root.style.setProperty('--font-size-sm', '14px');
-            root.style.setProperty('--font-size-lg', '18px');
+            // 기본 (0.9배) - 사용자가 요청한 비율 복구
+            root.style.setProperty('--font-size-base', 'clamp(0.8rem, 0.75rem + 0.45vw, 1rem)');
+            root.style.setProperty('--font-size-sm', 'clamp(0.675rem, 0.65rem + 0.35vw, 0.9rem)');
+            root.style.setProperty('--font-size-lg', 'clamp(0.9rem, 0.85rem + 0.55vw, 1.15rem)');
             break;
         case 'level2':
-            root.style.setProperty('--font-size-base', '18px');
-            root.style.setProperty('--font-size-sm', '16px');
-            root.style.setProperty('--font-size-lg', '20px');
+            // 확대 (1.0배) - CSS 기본값과 동일
+            root.style.setProperty('--font-size-base', 'clamp(0.875rem, 0.8rem + 0.5vw, 1.125rem)');
+            root.style.setProperty('--font-size-sm', 'clamp(0.75rem, 0.7rem + 0.4vw, 1rem)');
+            root.style.setProperty('--font-size-lg', 'clamp(1rem, 0.9rem + 0.6vw, 1.25rem)');
             break;
         case 'level3':
-            root.style.setProperty('--font-size-base', '20px');
-            root.style.setProperty('--font-size-sm', '18px');
-            root.style.setProperty('--font-size-lg', '22px');
+            // 최대 확대 (약 1.15배)
+            root.style.setProperty('--font-size-base', 'clamp(1rem, 0.9rem + 0.6vw, 1.25rem)');
+            root.style.setProperty('--font-size-sm', 'clamp(0.875rem, 0.8rem + 0.5vw, 1.125rem)');
+            root.style.setProperty('--font-size-lg', 'clamp(1.125rem, 1rem + 0.7vw, 1.375rem)');
             break;
     }
 
@@ -294,11 +297,19 @@ function closeHelpModal(event) {
 // 이벤트 리스너 초기화
 // ==========================================
 document.addEventListener('DOMContentLoaded', function () {
-    // Enter 키로 메시지 전송
     const messageInput = document.getElementById('message-input');
+
     if (messageInput) {
-        messageInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
+        // 입력창 자동 높이 조절
+        messageInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 72) + 'px'; // 최대 3줄(72px)
+        });
+
+        // Enter 키로 메시지 전송 (Shift+Enter는 줄바꿈)
+        messageInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 sendMessage();
             }
         });
@@ -308,6 +319,51 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeHelpModal();
+            // 사이드바도 닫기 (모바일)
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar && sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
         }
     });
 });
+
+// ==========================================
+// 사이드바 토글 함수
+// ==========================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const isMobile = window.innerWidth <= 768;
+
+    if (sidebar) {
+        if (isMobile) {
+            // 모바일: open 클래스로 드로어 열기
+            sidebar.classList.toggle('open');
+            if (overlay) {
+                overlay.classList.toggle('active');
+            }
+            // body 스크롤 제어
+            if (sidebar.classList.contains('open')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        } else {
+            // 데스크탑: collapsed 클래스로 사이드바 접기
+            sidebar.classList.toggle('collapsed');
+            document.body.classList.toggle('sidebar-collapsed');
+        }
+    }
+}
+
+// ==========================================
+// 추천 질문 입력 함수
+// ==========================================
+function setInputValue(text) {
+    const input = document.getElementById('message-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+    }
+}
